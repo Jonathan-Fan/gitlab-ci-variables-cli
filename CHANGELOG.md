@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Changed
 
 - Improve console info messages.
+- Updated `listVariables` function to list all variables for a project if the variables are more than 20.
 
 ## [v2.0.0] - 2017-10-12
 
