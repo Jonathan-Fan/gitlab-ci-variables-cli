@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
+import faker from 'faker';
 
 import gitlabCIProject from '../../src/lib/gitlab-ci';
 
@@ -14,27 +15,40 @@ describe('gitlab-ci-project-handler', () => {
   });
 
   it('list variables', async () => {
-    const mockResponse = [
-      {
-        key: 'DEPLOYMENT_REGION',
-        value: 'us-east-1',
-        protected: false,
-      },
-      {
-        key: 'ENV',
-        value: 'test',
-        protected: false,
-      },
-    ];
 
-    mock.onGet(`${apiBase}/variables?private_token=${gitlabToken}`).reply(200, mockResponse);
+    const mockHeadResponse = {
+      'x-total-pages': '3',
+    };
+    const mockPageOneResponse = [...Array(20)].map(() => {
+      return {
+        key: faker.random.uuid().toUpperCase(),
+        value: faker.random.number(10),
+        protected: false,
+      };
+    });
+    const mockPageTwoResponse = [...Array(20)].map(() => {
+      return {
+        key: faker.random.uuid().toUpperCase(),
+        value: faker.random.number(10),
+        protected: false,
+      };
+    });
+    const mockPageThreeResponse = [...Array(10)].map(() => {
+      return {
+        key: faker.random.uuid().toUpperCase(),
+        value: faker.random.number(10),
+        protected: false,
+      };
+    });
+
+    mock.onHead(`${apiBase}/variables?private_token=${gitlabToken}`).reply(200, {}, mockHeadResponse);
+    mock.onGet(`${apiBase}/variables?private_token=${gitlabToken}&page=1`).reply(200, mockPageOneResponse);
+    mock.onGet(`${apiBase}/variables?private_token=${gitlabToken}&page=2`).reply(200, mockPageTwoResponse);
+    mock.onGet(`${apiBase}/variables?private_token=${gitlabToken}&page=3`).reply(200, mockPageThreeResponse);
 
     const handler = gitlabCIProject('https://src.temando.io/khoa.tran/temando-field-manual-tome', gitlabToken);
     const variables = await handler.listVariables();
-
-    expect(variables.length).to.equal(2);
-    expect(variables[0].key).to.equal('DEPLOYMENT_REGION');
-    expect(variables[1].key).to.equal('ENV');
+    expect(variables.length).to.equal(50);
   });
 
   it('update variable', async () => {
@@ -94,6 +108,10 @@ describe('gitlab-ci-project-handler', () => {
     });
 
     it('do not force update', async () => {
+      const mockHeadResponse = {
+        'x-total-pages': '1',
+      };
+
       const mockListVariablesResponse = [
         {
           key: 'DEPLOYMENT_REGION',
@@ -107,7 +125,8 @@ describe('gitlab-ci-project-handler', () => {
         },
       ];
 
-      mock.onGet(`${apiBase}/variables?private_token=${gitlabToken}`).reply(200, mockListVariablesResponse);
+      mock.onHead(`${apiBase}/variables?private_token=${gitlabToken}`).reply(200, {}, mockHeadResponse);
+      mock.onGet(`${apiBase}/variables?private_token=${gitlabToken}&page=1`).reply(200, mockListVariablesResponse);
       mock.onPost(`${apiBase}/variables?private_token=${gitlabToken}`).reply(200, { REGION: 'us-east-1' });
 
       const handler = gitlabCIProject('https://src.temando.io/khoa.tran/temando-field-manual-tome', gitlabToken);
@@ -122,6 +141,10 @@ describe('gitlab-ci-project-handler', () => {
     });
 
     it('force update', async () => {
+      const mockHeadResponse = {
+        'x-total-pages': '1',
+      };
+
       const mockListVariablesResponse = [
         {
           key: 'DEPLOYMENT_REGION',
@@ -135,7 +158,8 @@ describe('gitlab-ci-project-handler', () => {
         },
       ];
 
-      mock.onGet(`${apiBase}/variables?private_token=${gitlabToken}`).reply(200, mockListVariablesResponse);
+      mock.onHead(`${apiBase}/variables?private_token=${gitlabToken}`).reply(200, {}, mockHeadResponse);
+      mock.onGet(`${apiBase}/variables?private_token=${gitlabToken}&page=1`).reply(200, mockListVariablesResponse);
       mock.onPost(`${apiBase}/variables?private_token=${gitlabToken}`).reply(200, { REGION: 'us-east-1' });
       mock.onPut(`${apiBase}/variables/ENV?private_token=${gitlabToken}`).reply(200, { ENV: 'env2' });
 

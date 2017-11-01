@@ -88,9 +88,18 @@ export default function gitlabCI(url, token) {
    * @return {Promise<Array>} array of variable objects
    */
   async function listVariables() {
-    const response = await axios.get(`${apiUrl}?${tokenQueryString}`);
+    let allVariables = [];
+    let response = await axios.head(`${apiUrl}?${tokenQueryString}`);
+    const pages = Array.from({ length: response.headers[('x-total-pages')] }, (v, i) => i + 1);
 
-    return response.data;
+    const promises = pages.map(async (page) => {
+      response = await axios.get(`${apiUrl}?${tokenQueryString}&page=${page}`);
+      allVariables = allVariables.concat(response.data);
+    });
+
+    await Promise.all(promises);
+
+    return allVariables;
   }
 
   /**
